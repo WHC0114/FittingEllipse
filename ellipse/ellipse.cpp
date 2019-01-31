@@ -152,7 +152,7 @@ int ExchangeVar(Point UpdatePoint, float& x, Mat Dom)
 {
 	static Point LastPoint = Point(0.0);
 	static Point NewPoint = Point(0, 0);
-	static long int count = 0;
+	static int count = 0;
 	if (LastPoint == Point(0, 0))
 	{
 		LastPoint = UpdatePoint;
@@ -170,17 +170,19 @@ int ExchangeVar(Point UpdatePoint, float& x, Mat Dom)
 		NewPoint = UpdatePoint;
 	}
 
-	int VarX = (NewPoint.x - LastPoint.x) * 2;
-	VarX = VarX > 10 ? 10 : VarX;
-	VarX = VarX < -10 ? -10 : VarX;
+	int VarX = (NewPoint.x - LastPoint.x) * 5;
+	VarX = VarX > 5 ? 5 : VarX;
+	VarX = VarX < -5 ? -5 : VarX;
 
-	cout << VarX << endl;
+	if (VarX != 0)
+		count = VarX;
+	else
+		VarX = count;
+
+
+	//cout << VarX << endl;
 	x = VarX + NewPoint.x;
-	//cout << "Update X:" << UpdatePoint.x << "\t" << "Last X:" << LastPoint.x << "\t" << "Now X:" << NewPoint.x << "\t" << "x:" << x << endl;
-	//x = x > Dom.at<int>(0, 0) ? x : Dom.at<int>(0, 0);
-	//x = x < Dom.at<int>(0, 1) ? x : Dom.at<int>(0, 1);
-	//if (x < Dom.at<int>(0, 0) || x > Dom.at<int>(0, 1))
-	//	x = UpdatePoint.x;
+
 	if (x <= Dom.at<int>(0, 0))
 	{
 		x = Dom.at<int>(0, 0) + abs(Dom.at<int>(0, 0) - x);

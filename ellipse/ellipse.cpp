@@ -14,9 +14,9 @@ struct EllipsePara
 	float f;
 };
 void getEllipsePara(RotatedRect &ellipsemege, EllipsePara& EP);
-float Compute(Point,float x, EllipsePara EP);
+float Compute(Point, float x, EllipsePara EP);
 void maxminPoint(Mat& mask, Mat& Dom);
-int ExchangeVar(Point UpdatePoint, float& x,Mat Dom);
+int ExchangeVar(Point UpdatePoint, float& x, Mat Dom);
 double distance(Point point1, Point point2);
 float Compute(Point NowPoint, float x, EllipsePara EP, Mat& mask);
 int main()
@@ -34,7 +34,7 @@ int main()
 	Mat cimage = Mat::zeros(src.size(), CV_8UC3);
 	Mat mask = Mat::zeros(src.size(), CV_8UC1);
 	vector<Point> contours2;
-	for (int i = 0; i < 130; i++)
+	for (int i = 0; i < contours[0].size(); i++)
 	{
 		contours2.push_back(contours[0][i]);
 		circle(cimage, contours[0][i], 2, Scalar(0, 255, 255), 2);
@@ -63,7 +63,7 @@ int main()
 		int	flag = ExchangeVar(contours[0][i], x, Dom);
 		if (flag == 0)
 			continue;
-		float y = Compute(contours[0][i],x, EP);
+		float y = Compute(contours[0][i], x, EP);
 		circle(colorMask, Point(x, y), 2, Scalar(0, 255, 0), 2);
 		imshow("colorMask", colorMask);
 		colorMask = Mat::zeros(src.size(), CV_8UC3);
@@ -110,7 +110,7 @@ void getEllipsePara(RotatedRect &ellipsemege, EllipsePara& EP)
 	cout << "center:" << EP.center << endl;
 }
 
-float Compute(Point NowPoint,float x, EllipsePara EP)
+float Compute(Point NowPoint, float x, EllipsePara EP)
 {
 	float VarX = x - EP.center.x;
 	float y = -(EP.b*VarX - 2 * EP.c*EP.center.y + sqrt((pow(EP.b, 2)*pow(VarX, 2) - 4 * EP.a*EP.c*pow(VarX, 2) - 4 * EP.c*EP.f))) / (2 * EP.c);
@@ -118,17 +118,21 @@ float Compute(Point NowPoint,float x, EllipsePara EP)
 	float crossCenter1 = (NowPoint.x - EP.center.x)*(y - EP.center.y) - (x - EP.center.x) * (NowPoint.y - EP.center.y);
 	float crossCenter2 = (NowPoint.x - EP.center.x)*(y2 - EP.center.y) - (x - EP.center.x) * (NowPoint.y - EP.center.y);
 
-	if (crossCenter1 < 0 && crossCenter2 < 0)
+	/*if (crossCenter1 < 0 && crossCenter2 < 0)
 	{
-		if (distance(NowPoint, Point(x, y)) < distance(NowPoint, Point(x, y2)))
-			return y;
-		else
-			return y2;
+	if (distance(NowPoint, Point(x, y)) < distance(NowPoint, Point(x, y2)))
+	return y;
+	else
+	return y2;
 	}
 	else if (crossCenter1 > 0 && crossCenter2 < 0)
-		return y2;
+	return y2;
 	else
-		return NowPoint.y;
+	return NowPoint.y;*/
+	if (distance(NowPoint, Point(x, y)) < distance(NowPoint, Point(x, y2)))
+		return y;
+	else
+		return y2;
 }
 
 void maxminPoint(Mat& mask, Mat& Dom)
@@ -144,10 +148,10 @@ void maxminPoint(Mat& mask, Mat& Dom)
 }
 
 
-int ExchangeVar(Point UpdatePoint,float& x,Mat Dom)
+int ExchangeVar(Point UpdatePoint, float& x, Mat Dom)
 {
-	static Point LastPoint= Point(0.0);
-	static Point NewPoint = Point(0,0);
+	static Point LastPoint = Point(0.0);
+	static Point NewPoint = Point(0, 0);
 	static long int count = 0;
 	if (LastPoint == Point(0, 0))
 	{
@@ -166,10 +170,13 @@ int ExchangeVar(Point UpdatePoint,float& x,Mat Dom)
 		NewPoint = UpdatePoint;
 	}
 
-	int VarX = NewPoint.x - LastPoint.x;
-	//cout << VarX << endl;
-	x = VarX * 5 + NewPoint.x;
-	cout << "Update X:" << UpdatePoint.x << "\t" <<"Last X:"<< LastPoint.x << "\t" <<"Now X:" << NewPoint.x << "\t" << "x:" << x << endl;
+	int VarX = (NewPoint.x - LastPoint.x) * 2;
+	VarX = VarX > 10 ? 10 : VarX;
+	VarX = VarX < -10 ? -10 : VarX;
+
+	cout << VarX << endl;
+	x = VarX + NewPoint.x;
+	//cout << "Update X:" << UpdatePoint.x << "\t" << "Last X:" << LastPoint.x << "\t" << "Now X:" << NewPoint.x << "\t" << "x:" << x << endl;
 	//x = x > Dom.at<int>(0, 0) ? x : Dom.at<int>(0, 0);
 	//x = x < Dom.at<int>(0, 1) ? x : Dom.at<int>(0, 1);
 	//if (x < Dom.at<int>(0, 0) || x > Dom.at<int>(0, 1))
@@ -193,14 +200,14 @@ double distance(Point point1, Point point2)
 	return distance;
 }
 
-float Compute(Point NowPoint, float x, EllipsePara EP,Mat& mask)
+float Compute(Point NowPoint, float x, EllipsePara EP, Mat& mask)
 {
 	float VarX = x - EP.center.x;
 	float y = -(EP.b*VarX - 2 * EP.c*EP.center.y + sqrt((pow(EP.b, 2)*pow(VarX, 2) - 4 * EP.a*EP.c*pow(VarX, 2) - 4 * EP.c*EP.f))) / (2 * EP.c);
 	float y2 = (-EP.b*VarX + 2 * EP.c*EP.center.y + sqrt((pow(EP.b, 2)*pow(VarX, 2) - 4 * EP.a*EP.c*pow(VarX, 2) - 4 * EP.c*EP.f))) / (2 * EP.c);
 	float crossCenter = (NowPoint.x - EP.center.x)*(y - EP.center.y) - (x - EP.center.x) * (NowPoint.y - EP.center.y);
 	circle(mask, Point(x, y), 2, Scalar(255, 0, 0), 2);
-	circle(mask, Point(x, y2), 2, Scalar(0,255,0), 2);
+	circle(mask, Point(x, y2), 2, Scalar(0, 255, 0), 2);
 	circle(mask, NowPoint, 2, Scalar(0, 0, 255), 2);
 	cout << crossCenter << endl;
 	if (crossCenter < 0)

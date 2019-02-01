@@ -18,17 +18,17 @@ float Compute(Point, float x, EllipsePara EP);
 void maxminPoint(Mat& mask, Mat& Dom);
 int ExchangeVar(Point UpdatePoint, float& x, Mat Dom);
 double distance(Point point1, Point point2);
-float Compute(Point NowPoint, float x, EllipsePara EP, Mat& mask);
+
+int thresholdValue = 0;       //model selection
+
 int main()
 {
-	Mat src = imread("E:/pictures/ellipse.png");
+	Mat src = imread("E:/pictures/ellipse2.png");
 	cout << src.size() << endl;
 	Mat srcGray;
 	cvtColor(src, srcGray, COLOR_BGR2GRAY);
 	threshold(srcGray, srcGray, 20, 255, THRESH_BINARY_INV);
 	vector<vector<Point>> contours;
-	//Mat dst;
-	//Canny(srcGray, dst, 30, 70);
 
 	findContours(srcGray, contours, RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 	Mat cimage = Mat::zeros(src.size(), CV_8UC3);
@@ -40,12 +40,7 @@ int main()
 		circle(cimage, contours[0][i], 2, Scalar(0, 255, 255), 2);
 	}
 
-	//cout << contours2[1]<< endl;
-
-
 	size_t count = contours2.size();
-	//if (count < 6)
-	//	continue;
 	RotatedRect box = fitEllipse(contours2);
 
 	EllipsePara EP;
@@ -55,6 +50,7 @@ int main()
 	ellipse(mask, box, Scalar::all(255), 1);
 	Mat Dom;
 	maxminPoint(mask, Dom);
+	cout << "Dom :" << Dom << endl;
 	Mat colorMask = Mat::zeros(src.size(), CV_8UC3);
 	for (int i = 0; i < contours[0].size(); i++)
 	{
@@ -69,9 +65,6 @@ int main()
 		colorMask = Mat::zeros(src.size(), CV_8UC3);
 		waitKey(20);
 	}
-
-	//cout << "OUT Y:" << y << endl;
-	//circle(src, Point(300, y), 2, Scalar(0, 255, 0), 2);
 
 	Point2f points[4];
 	box.points(points);
@@ -88,6 +81,7 @@ int main()
 	return 0;
 }
 
+//**************calculation of ellipse parameters*************
 void getEllipsePara(RotatedRect &ellipsemege, EllipsePara& EP)
 {
 	EP.theta = ellipsemege.angle * CV_PI / 180;
@@ -110,44 +104,51 @@ void getEllipsePara(RotatedRect &ellipsemege, EllipsePara& EP)
 	cout << "center:" << EP.center << endl;
 }
 
+
+//calculation y value and select correct y value
 float Compute(Point NowPoint, float x, EllipsePara EP)
 {
-	float VarX = x - EP.center.x;
+	float VarX = cvCeil(x - EP.center.x);
 	float y = -(EP.b*VarX - 2 * EP.c*EP.center.y + sqrt((pow(EP.b, 2)*pow(VarX, 2) - 4 * EP.a*EP.c*pow(VarX, 2) - 4 * EP.c*EP.f))) / (2 * EP.c);
 	float y2 = (-EP.b*VarX + 2 * EP.c*EP.center.y + sqrt((pow(EP.b, 2)*pow(VarX, 2) - 4 * EP.a*EP.c*pow(VarX, 2) - 4 * EP.c*EP.f))) / (2 * EP.c);
 	float crossCenter1 = (NowPoint.x - EP.center.x)*(y - EP.center.y) - (x - EP.center.x) * (NowPoint.y - EP.center.y);
 	float crossCenter2 = (NowPoint.x - EP.center.x)*(y2 - EP.center.y) - (x - EP.center.x) * (NowPoint.y - EP.center.y);
 
-	/*if (crossCenter1 < 0 && crossCenter2 < 0)
+	//calculation the distance between (x,y) and (x, y2);
+	double distanceXY = distance(NowPoint, Point(x, y));
+	double distanceXY2 = distance(NowPoint, Point(x, y2));
+
+
+	//there are three options
+	switch (thresholdValue)
 	{
-	if (distance(NowPoint, Point(x, y)) < distance(NowPoint, Point(x, y2)))
-	return y;
-	else
-	return y2;
+	case 0:             //if x is not less than the minimum
+	{
+		if (distanceXY < distanceXY2)   //we pick the closest point
+			return y;
+		else
+			return y2;
 	}
-	else if (crossCenter1 > 0 && crossCenter2 < 0)
-	return y2;
-	else
-	return NowPoint.y;*/
-	if (distance(NowPoint, Point(x, y)) < distance(NowPoint, Point(x, y2)))
-		return y;
-	else
+	case 1:             //if x is close to the minimum
 		return y2;
+	case 2:
+		return y;       //if x is close to the maximum
+	default:
+		break;
+	}
 }
 
+//Place the bounding value in a container of type Mat 
 void maxminPoint(Mat& mask, Mat& Dom)
 {
 	Rect rect = boundingRect(mask);
 	Dom = (Mat_<int>(2, 2) <<
-		rect.tl().x, rect.br().x,
+		rect.tl().x + 2, rect.br().x - 2,
 		rect.tl().y, rect.br().y
 		);
-	//cout << rect << endl;
-	//circle(mask, rect.tl(), 2, Scalar::all(255), 3);
-	//rectangle(mask, rect, Scalar::all(255));
 }
 
-
+//To calculation the x value
 int ExchangeVar(Point UpdatePoint, float& x, Mat Dom)
 {
 	static Point LastPoint = Point(0.0);
@@ -179,22 +180,25 @@ int ExchangeVar(Point UpdatePoint, float& x, Mat Dom)
 	else
 		VarX = count;
 
-
-	//cout << VarX << endl;
 	x = VarX + NewPoint.x;
 
 	if (x <= Dom.at<int>(0, 0))
 	{
 		x = Dom.at<int>(0, 0) + abs(Dom.at<int>(0, 0) - x);
+		thresholdValue = 1;
 	}
+	else
+		thresholdValue = 0;
 
 	if (x >= Dom.at<int>(0, 1))
 	{
 		x = Dom.at<int>(0, 1) - abs(Dom.at<int>(0, 1) - x);
+		thresholdValue = 2;
 	}
-	//cout << x << endl;
+
 }
 
+//return distance(No sqrt)
 double distance(Point point1, Point point2)
 {
 	double distance;
@@ -202,18 +206,3 @@ double distance(Point point1, Point point2)
 	return distance;
 }
 
-float Compute(Point NowPoint, float x, EllipsePara EP, Mat& mask)
-{
-	float VarX = x - EP.center.x;
-	float y = -(EP.b*VarX - 2 * EP.c*EP.center.y + sqrt((pow(EP.b, 2)*pow(VarX, 2) - 4 * EP.a*EP.c*pow(VarX, 2) - 4 * EP.c*EP.f))) / (2 * EP.c);
-	float y2 = (-EP.b*VarX + 2 * EP.c*EP.center.y + sqrt((pow(EP.b, 2)*pow(VarX, 2) - 4 * EP.a*EP.c*pow(VarX, 2) - 4 * EP.c*EP.f))) / (2 * EP.c);
-	float crossCenter = (NowPoint.x - EP.center.x)*(y - EP.center.y) - (x - EP.center.x) * (NowPoint.y - EP.center.y);
-	circle(mask, Point(x, y), 2, Scalar(255, 0, 0), 2);
-	circle(mask, Point(x, y2), 2, Scalar(0, 255, 0), 2);
-	circle(mask, NowPoint, 2, Scalar(0, 0, 255), 2);
-	cout << crossCenter << endl;
-	if (crossCenter < 0)
-		return y;
-	else
-		return y2;
-}

@@ -18,5 +18,13 @@
     <ClCompile Include="ellipse.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="fittingEllipse.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="FittingEllipse.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

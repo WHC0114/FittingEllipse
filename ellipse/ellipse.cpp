@@ -1,5 +1,5 @@
 #include "opencv2/opencv.hpp"
-
+#include "FittingEllipse.h"
 using namespace cv;
 using namespace std;
 
@@ -57,8 +57,10 @@ int main()
 		circle(colorMask, contours[0][i], 2, Scalar(0, 0, 255), 2);
 		float x;
 		int	flag = ExchangeVar(contours[0][i], x, Dom);
+		FittingEllipse fe(src, contours[0]);
 		if (flag == 0)
 			continue;
+		fe.apply(contours2[i]);
 		float y = Compute(contours[0][i], x, EP);
 		circle(colorMask, Point(x, y), 2, Scalar(0, 255, 0), 2);
 		imshow("colorMask", colorMask);
@@ -111,8 +113,8 @@ float Compute(Point NowPoint, float x, EllipsePara EP)
 	float VarX = cvCeil(x - EP.center.x);
 	float y = -(EP.b*VarX - 2 * EP.c*EP.center.y + sqrt((pow(EP.b, 2)*pow(VarX, 2) - 4 * EP.a*EP.c*pow(VarX, 2) - 4 * EP.c*EP.f))) / (2 * EP.c);
 	float y2 = (-EP.b*VarX + 2 * EP.c*EP.center.y + sqrt((pow(EP.b, 2)*pow(VarX, 2) - 4 * EP.a*EP.c*pow(VarX, 2) - 4 * EP.c*EP.f))) / (2 * EP.c);
-	float crossCenter1 = (NowPoint.x - EP.center.x)*(y - EP.center.y) - (x - EP.center.x) * (NowPoint.y - EP.center.y);
-	float crossCenter2 = (NowPoint.x - EP.center.x)*(y2 - EP.center.y) - (x - EP.center.x) * (NowPoint.y - EP.center.y);
+	/*float crossCenter1 = (NowPoint.x - EP.center.x)*(y - EP.center.y) - (x - EP.center.x) * (NowPoint.y - EP.center.y);
+	float crossCenter2 = (NowPoint.x - EP.center.x)*(y2 - EP.center.y) - (x - EP.center.x) * (NowPoint.y - EP.center.y);*/
 
 	//calculation the distance between (x,y) and (x, y2);
 	double distanceXY = distance(NowPoint, Point(x, y));

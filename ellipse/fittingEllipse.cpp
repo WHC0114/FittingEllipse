@@ -1,40 +1,14 @@
+#include <iostream>
 #include "opencv2/opencv.hpp"
 #include "FittingEllipse.h"
-using namespace cv;
 using namespace std;
+using namespace cv;
 
-class FittingEllipse
-{
-public:
-	FittingEllipse(Mat InputImage, vector<Point> points);
-	~FittingEllipse();
-	bool judgeNumber();
-	void apply(Point NowPoint);
-	inline double distance(Point p1, Point p2);
-	void getPredictY(float &y);
-	Mat Dom;
-private:
-	void getEllipsePara();
-	void minmaxPoint();
-	float Compute();
-	int ExchangeVarX();
-	RotatedRect ellipsemege;
-	vector<Point> points;
-	Point NowPoint;
-	Point2f center;
-	double theta;
-	double A;
-	double B;
-	double C;
-	double F;
-	Mat InputImage;
-	int PredictX;
-	int Object;
-};
+
 
 bool FittingEllipse::judgeNumber()
 {
-	if (this->points.size() < 6)
+	if (points.size() < 6)
 	{
 		cout << "Insufficient target point" << endl;
 		return false;
@@ -47,16 +21,22 @@ void FittingEllipse::getEllipsePara()
 {
 	if (!judgeNumber())
 		exit(0);
-	this->ellipsemege = fitEllipse(this->points);
-	this->theta = (*this).ellipsemege.angle * 180 / CV_PI;
-	float a = this->ellipsemege.size.width / 2.0;
-	float b = this->ellipsemege.size.height / 2.0;
+	ellipsemege = fitEllipse(points);
+	theta = ellipsemege.angle * CV_PI / 180;
+	float a = ellipsemege.size.width / 2.0;
+	float b = ellipsemege.size.height / 2.0;
 
-	this->center = this->ellipsemege.center;
-	this->A = a*a*sin(this->theta)*sin(this->theta) + b*b*cos(this->theta)*cos(this->theta);
-	this->B = (-2.0)*(a*a - b*b)*sin(this->theta)*cos(this->theta);
-	this->C = a*a*cos(this->theta)*cos(this->theta) + b*b*sin(this->theta)*sin(this->theta);
-	this->F = (-1.0)*a*a*b*b;
+	center = ellipsemege.center;
+	A = a*a*sin(theta)*sin(theta) + b*b*cos(theta)*cos(theta);
+	B = (-2.0)*(a*a - b*b)*sin(theta)*cos(theta);
+	C = a*a*cos(theta)*cos(theta) + b*b*sin(theta)*sin(theta);
+	F = (-1.0)*a*a*b*b;
+	
+	cout << "A:"  << "\t"<< A << endl;
+	cout << "B:" << "\t" << B << endl;
+	cout << "C:" << "\t" << C << endl;
+	cout << "F:" << "\t" << F << endl;
+	cout << "center"<< "\t" << ellipsemege.center<< endl;
 }
 
 inline double FittingEllipse::distance(Point p1, Point p2)
@@ -66,14 +46,14 @@ inline double FittingEllipse::distance(Point p1, Point p2)
 
 float FittingEllipse::Compute()
 {
-	float VarX = cvCeil(this->PredictX - this->center.x);
-	float y1 = -(this->B*VarX - 2 * this->B*this->center.y + sqrt((pow(this->B, 2)*pow(VarX, 2) - 4 * this->A*this->C*pow(VarX, 2) - 4 * this->C*this->F))) / (2 * this->C);
-	float y2 = (-this->B*VarX + 2 * this->B*this->center.y + sqrt((pow(this->B, 2)*pow(VarX, 2) - 4 * this->A*this->C*pow(VarX, 2) - 4 * this->C*this->F))) / (2 * this->C);
-	double distanceY1 = distance(this->NowPoint, Point(this->PredictX, y1));
-	double distanceY2 = distance(this->NowPoint, Point(this->PredictX, y2));
+	float VarX = cvCeil(PredictX - center.x);
+	float y1 = -(B*VarX - 2 * C*center.y + sqrt((pow(B, 2)*pow(VarX, 2) - 4 * A*C*pow(VarX, 2) - 4 * C*F))) / (2 * C);
+	float y2 = (-B*VarX + 2 * C*center.y + sqrt((pow(B, 2)*pow(VarX, 2) - 4 * A*C*pow(VarX, 2) - 4 * C*F))) / (2 * C);
+	double distanceY1 = distance(NowPoint, Point(PredictX, y1));
+	double distanceY2 = distance(NowPoint, Point(PredictX, y2));
 
 	//there are three options
-	switch (this->Object)
+	switch (Object)
 	{
 	case 0:             //if x is not less than the minimum
 	{
@@ -93,10 +73,10 @@ float FittingEllipse::Compute()
 
 void FittingEllipse::minmaxPoint()
 {
-	Mat mask = Mat::zeros(this->InputImage.size(), CV_8UC1);
-	ellipse(mask, this->ellipsemege, Scalar::all(255), 1);
+	Mat mask = Mat::zeros(InputImage.size(), CV_8UC1);
+	ellipse(mask, ellipsemege, Scalar::all(255), 1);
 	Rect rect = boundingRect(mask);
-	this->Dom = (Mat_<int>(2, 2) <<
+	Dom = (Mat_<int>(2, 2) <<
 		rect.tl().x + 2, rect.br().x - 2,
 		rect.tl().y, rect.br().y
 		);
@@ -106,8 +86,8 @@ FittingEllipse::FittingEllipse(Mat InputImage, vector<Point> points)
 {
 	this->points = points;
 	this->InputImage = InputImage;
-	this->getEllipsePara();
-	this->minmaxPoint();
+	getEllipsePara();
+	minmaxPoint();
 };
 
 int FittingEllipse::ExchangeVarX()
@@ -117,19 +97,19 @@ int FittingEllipse::ExchangeVarX()
 	static int count = 0;
 	if (LastPoint == Point(0, 0))
 	{
-		LastPoint = this->NowPoint;
-		return 0;
+		LastPoint = NowPoint;
+		return 0; 
 	}
-	if (LastPoint != this->NowPoint && NewPoint == Point(0, 0))
+	if (LastPoint != NowPoint && NewPoint == Point(0, 0))
 	{
-		NewPoint = this->NowPoint;
+		NewPoint = NowPoint;
 	}
 
 
-	if (NewPoint != this->NowPoint)
+	if (NewPoint != NowPoint)
 	{
 		LastPoint = NewPoint;
-		NewPoint = this->NowPoint;
+		NewPoint = NowPoint;
 	}
 
 	int VarX = NewPoint.x - LastPoint.x;
@@ -140,20 +120,20 @@ int FittingEllipse::ExchangeVarX()
 		VarX = count;
 
 	VarX = (VarX / abs(VarX)) * 8;
-	this->PredictX = VarX + this->NowPoint.x;
+	PredictX = VarX + NowPoint.x;
 
-	if (this->PredictX <= Dom.at<int>(0, 0))
+	if (PredictX <= Dom.at<int>(0, 0))
 	{
-		this->PredictX = Dom.at<int>(0, 0) + abs(Dom.at<int>(0, 0) - this->PredictX);
-		this->Object = 1;
+		PredictX = Dom.at<int>(0, 0) + abs(Dom.at<int>(0, 0) - PredictX);
+		Object = 1;
 	}
 	else
-		this->Object = 0;
+		Object = 0;
 
-	if (this->PredictX >= Dom.at<int>(0, 1))
+	if (PredictX >= Dom.at<int>(0, 1))
 	{
-		this->PredictX = Dom.at<int>(0, 1) - abs(Dom.at<int>(0, 1) - this->PredictX);
-		this->Object = 2;
+		PredictX = Dom.at<int>(0, 1) - abs(Dom.at<int>(0, 1) - PredictX);
+		Object = 2;
 	}
 
 }
@@ -164,11 +144,12 @@ void FittingEllipse::apply(Point NowPoint)
 }
 void FittingEllipse::getPredictY(float &y)
 {
-	this->ExchangeVarX();
-	y = this->Compute();
+	ExchangeVarX();
+	y = Compute();
 }
 
 
 FittingEllipse::~FittingEllipse()
 {
+	;
 }

@@ -52,12 +52,12 @@ int main()
 	maxminPoint(mask, Dom);
 	cout << "Dom :" << Dom << endl;
 	Mat colorMask = Mat::zeros(src.size(), CV_8UC3);
+	FittingEllipse fe(src, contours[0]);
 	for (int i = 0; i < contours[0].size(); i++)
 	{
 		circle(colorMask, contours[0][i], 2, Scalar(0, 0, 255), 2);
 		float x;
 		int	flag = ExchangeVar(contours[0][i], x, Dom);
-		FittingEllipse fe(src, contours[0]);
 		if (flag == 0)
 			continue;
 		fe.apply(contours2[i]);
